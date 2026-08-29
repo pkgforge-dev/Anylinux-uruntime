@@ -13,10 +13,6 @@ use indexmap::IndexMap;
 
 #[cfg(feature = "dwarfs")]
 const DWARFS_VERSION: &str = "0.15.7";
-#[cfg(feature = "squashfs")]
-const SQUASHFS_TOOLS_VERSION: &str = "4.7.5";
-#[cfg(feature = "squashfs")]
-const SQUASHFUSE_VERSION: &str = "0.6.2.r0";
 
 
 fn main() {
@@ -29,12 +25,6 @@ fn main() {
     let assets_path_link = project_path.join("assets");
 
     let assets = IndexMap::from([
-        #[cfg(feature = "squashfs")]
-        ("squashfuse", format!("https://github.com/VHSgunzo/squashfuse-static/releases/download/v{SQUASHFUSE_VERSION}/squashfuse-musl-mimalloc-{arch}")),
-        #[cfg(feature = "squashfs")]
-        ("unsquashfs", format!("https://github.com/VHSgunzo/squashfs-tools-static/releases/download/v{SQUASHFS_TOOLS_VERSION}/unsquashfs-{arch}")),
-        #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-        ("mksquashfs", format!("https://github.com/VHSgunzo/squashfs-tools-static/releases/download/v{SQUASHFS_TOOLS_VERSION}/mksquashfs-{arch}")),
         #[cfg(feature = "dwarfs")]
         {
             cfg_if! {

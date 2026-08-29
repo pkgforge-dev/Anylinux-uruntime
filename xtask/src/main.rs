@@ -25,16 +25,12 @@ fn try_main() -> Result<(), DynError> {
         "runimage-x86_64",
         "appimage-x86_64",
         "appimage-lite-x86_64",
-        "appimage-squashfs-x86_64",
-        "appimage-squashfs-lite-x86_64",
         "appimage-dwarfs-x86_64",
         "appimage-dwarfs-lite-x86_64",
 
         "runimage-aarch64",
         "appimage-aarch64",
         "appimage-lite-aarch64",
-        "appimage-squashfs-aarch64",
-        "appimage-squashfs-lite-aarch64",
         "appimage-dwarfs-aarch64",
         "appimage-dwarfs-lite-aarch64",
     ];
@@ -78,23 +74,17 @@ fn print_help() {
     eprintln!("Tasks:
     x86_64                           build x86_64 RunImage and AppImage uruntime
     runimage-x86_64                  build x86_64 RunImage uruntime
-    runimage-squashfs-x86_64         build x86_64 RunImage uruntime (SquashFS-only)
     runimage-dwarfs-x86_64           build x86_64 RunImage uruntime (DwarFS-only)
     appimage-x86_64                  build x86_64 AppImage uruntime
-    appimage-lite-x86_64             build x86_64 AppImage uruntime (no dwarfsck, mkdwarfs, mksquashfs, sqfstar)
-    appimage-squashfs-x86_64         build x86_64 AppImage uruntime (SquashFS-only)
-    appimage-squashfs-lite-x86_64    build x86_64 AppImage uruntime (SquashFS-only no mksquashfs, sqfstar)
+    appimage-lite-x86_64             build x86_64 AppImage uruntime (no dwarfsck, mkdwarfs)
     appimage-dwarfs-x86_64           build x86_64 AppImage uruntime (DwarFS-only)
     appimage-dwarfs-lite-x86_64      build x86_64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
 
     aarch64                          build aarch64 RunImage and AppImage uruntime
     runimage-aarch64                 build aarch64 RunImage uruntime
-    runimage-squashfs-aarch64        build aarch64 RunImage uruntime (SquashFS-only)
     runimage-dwarfs-aarch64          build aarch64 RunImage uruntime (DwarFS-only)
     appimage-aarch64                 build aarch64 AppImage uruntime
-    appimage-lite-aarch64            build aarch64 AppImage uruntime (no dwarfsck, mkdwarfs, mksquashfs, sqfstar)
-    appimage-squashfs-aarch64        build aarch64 AppImage uruntime (SquashFS-only)
-    appimage-squashfs-lite-aarch64   build aarch64 AppImage uruntime (SquashFS-only no mksquashfs, sqfstar)
+    appimage-lite-aarch64            build aarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
     appimage-dwarfs-aarch64          build aarch64 AppImage uruntime (DwarFS-only)
     appimage-dwarfs-lite-aarch64     build aarch64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
 
@@ -192,9 +182,7 @@ fn build(bin: &str) -> Result<(), DynError> {
         "--target", target
     ]);
 
-    if bin.contains("squashfs") {
-        build_args.append(&mut vec!["--no-default-features", "--features", "squashfs"]);
-    } else if bin.contains("dwarfs") {
+    if bin.contains("dwarfs") {
         build_args.append(&mut vec!["--no-default-features", "--features", "dwarfs"]);
     }
     let mut magic = "RI";

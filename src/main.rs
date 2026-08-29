@@ -86,18 +86,11 @@ struct Runtime {
 struct Image {
     path: PathBuf,
     offset: u64,
-    is_squash: bool,
     is_dwar: bool,
 }
 
 #[derive(Debug)]
 struct Embed {
-    #[cfg(feature = "squashfs")]
-    squashfuse: Vec<u8>,
-    #[cfg(feature = "squashfs")]
-    unsquashfs: Vec<u8>,
-    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-    mksquashfs: Vec<u8>,
     #[cfg(feature = "dwarfs")]
     dwarfs_universal: Vec<u8>,
 }
@@ -107,12 +100,6 @@ impl Embed {
         cfg_if! {
             if #[cfg(feature = "upx")] {
                 Embed {
-                    #[cfg(feature = "squashfs")]
-                    squashfuse: include_bytes!("../assets/squashfuse-upx").to_vec(),
-                    #[cfg(feature = "squashfs")]
-                    unsquashfs: include_bytes!("../assets/unsquashfs-upx").to_vec(),
-                    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-                    mksquashfs: include_bytes!("../assets/mksquashfs-upx").to_vec(),
                     #[cfg(all(feature = "lite", feature = "dwarfs"))]
                     dwarfs_universal: include_bytes!("../assets/dwarfs-fuse-extract-upx").to_vec(),
                     #[cfg(all(not(feature = "lite"), feature = "dwarfs"))]
@@ -120,12 +107,6 @@ impl Embed {
                 }
             } else {
                 Embed {
-                    #[cfg(feature = "squashfs")]
-                    squashfuse: include_bytes!("../assets/squashfuse-zst").to_vec(),
-                    #[cfg(feature = "squashfs")]
-                    unsquashfs: include_bytes!("../assets/unsquashfs-zst").to_vec(),
-                    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-                    mksquashfs: include_bytes!("../assets/mksquashfs-zst").to_vec(),
                     #[cfg(all(feature = "lite", feature = "dwarfs"))]
                     dwarfs_universal: include_bytes!("../assets/dwarfs-fuse-extract-zst").to_vec(),
                     #[cfg(all(not(feature = "lite"), feature = "dwarfs"))]
@@ -133,31 +114,6 @@ impl Embed {
                 }
             }
         }
-    }
-
-    #[cfg(feature = "squashfs")]
-    fn squashfuse(&self, exec_args: Vec<String>) {
-        mfd_exec("squashfuse", &self.squashfuse, exec_args);
-    }
-
-    #[cfg(feature = "squashfs")]
-    fn unsquashfs(&self, exec_args: Vec<String>) {
-        mfd_exec("unsquashfs", &self.unsquashfs, exec_args);
-    }
-
-    #[cfg(feature = "squashfs")]
-    fn sqfscat(&self, exec_args: Vec<String>) {
-        mfd_exec("sqfscat", &self.unsquashfs, exec_args);
-    }
-
-    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-    fn mksquashfs(&self, exec_args: Vec<String>) {
-        mfd_exec("mksquashfs", &self.mksquashfs, exec_args);
-    }
-
-    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-    fn sqfstar(&self, exec_args: Vec<String>) {
-        mfd_exec("sqfstar", &self.mksquashfs, exec_args);
     }
 
     #[cfg(feature = "dwarfs")]
@@ -222,19 +178,16 @@ fn get_image(path: &PathBuf, offset: u64) -> Result<Image> {
     let mut image = Image {
         path: path.to_path_buf(),
         offset,
-        is_dwar: false,
-        is_squash: false
+        is_dwar: false
     };
     if bytes_read == 4 {
         let read_str = String::from_utf8_lossy(&buff);
         if read_str.contains("DWAR") {
             image.is_dwar = true
-        } else if read_str.contains("hsqs") {
-            image.is_squash = true
         }
     }
-    if !image.is_squash && !image.is_dwar {
-        return Err(Error::new(NotFound, "SquashFS or DwarFS image not found!"))
+    if !image.is_dwar {
+        return Err(Error::new(NotFound, "DwarFS image not found!"))
     }
     Ok(image)
 }
@@ -912,59 +865,43 @@ fn mount_image(embed: &Embed, image: &Image, mount_dir: PathBuf, uid: u32, gid: 
     if is_mounted(&mount_dir).unwrap_or(false) { return }
     let mount_dir = mount_dir.to_str().unwrap_or_default().to_string();
     let image_path = image.path.to_str().unwrap_or_default().to_string();
-    if image.is_dwar {
-        #[cfg(feature = "dwarfs")]
-        {
-            let cpus = num_cpus::get();
-            let cachesize = get_dwfs_cachesize();
-            let workers = get_dwfs_workers(&cachesize, cpus);
-            let mut exec_args = vec![
-                image_path, mount_dir, "-f".into(),
-                "-o".into(), format!("uid={uid},gid={gid}"),
-                "-o".into(), format!("offset={},cachesize={cachesize},workers={workers}", image.offset),
-                "-o".into(), "ro,nodev,tidy_strategy=time,seq_detector=1,cache_files".into(),
-                "-o".into(), format!("blocksize={}", get_dwfs_option("DWARFS_BLOCKSIZE", DWARFS_BLOCKSIZE)),
-                "-o".into(), format!("readahead={}", get_dwfs_option("DWARFS_READAHEAD", DWARFS_READAHEAD)),
-            ];
-            match cachesize.as_str() {
-                "1536M"|"1024M" => { exec_args.append(&mut vec!["-o".into(), "clone_fd,tidy_interval=2s,tidy_max_age=10s".into()]); }
-                _ => { exec_args.append(&mut vec!["-o".into(), "tidy_interval=500ms,tidy_max_age=1s".into()]); }
-            }
-            if get_env_var!("ENABLE_FUSE_DEBUG") == "1" {
-                exec_args.append(&mut vec!["-o".into(), "debuglevel=debug".into()]);
-            } else {
-                exec_args.append(&mut vec!["-o".into(), "debuglevel=error".into()]);
-            }
-            if get_env_var!("DWARFS_PRELOAD_ALL") == "1" {
-                exec_args.append(&mut vec!["-o".into(), "preload_all".into()]);
-            } else {
-                exec_args.append(&mut vec!["-o".into(), "preload_category=hotness".into()]);
-            }
-            let dwarfs_analysis_file = get_env_var!("DWARFS_ANALYSIS_FILE");
-            if !dwarfs_analysis_file.is_empty() {
-                exec_args.append(&mut vec!["-o".into(), format!("analysis_file={dwarfs_analysis_file}")]);
-            }
-            if get_env_var!("DWARFS_USE_MMAP") == "1" {
-                exec_args.append(&mut vec!["-o".into(), "block_allocator=mmap".into()]);
-            } else {
-                exec_args.append(&mut vec!["-o".into(), "block_allocator=malloc".into()]);
-            }
-            embed.dwarfs(exec_args)
+    #[cfg(feature = "dwarfs")]
+    {
+        let cpus = num_cpus::get();
+        let cachesize = get_dwfs_cachesize();
+        let workers = get_dwfs_workers(&cachesize, cpus);
+        let mut exec_args = vec![
+            image_path, mount_dir, "-f".into(),
+            "-o".into(), format!("uid={uid},gid={gid}"),
+            "-o".into(), format!("offset={},cachesize={cachesize},workers={workers}", image.offset),
+            "-o".into(), "ro,nodev,tidy_strategy=time,seq_detector=1,cache_files".into(),
+            "-o".into(), format!("blocksize={}", get_dwfs_option("DWARFS_BLOCKSIZE", DWARFS_BLOCKSIZE)),
+            "-o".into(), format!("readahead={}", get_dwfs_option("DWARFS_READAHEAD", DWARFS_READAHEAD)),
+        ];
+        match cachesize.as_str() {
+            "1536M"|"1024M" => { exec_args.append(&mut vec!["-o".into(), "clone_fd,tidy_interval=2s,tidy_max_age=10s".into()]); }
+            _ => { exec_args.append(&mut vec!["-o".into(), "tidy_interval=500ms,tidy_max_age=1s".into()]); }
         }
-    } else {
-        #[cfg(feature = "squashfs")]
-        {
-            let mut exec_args = vec![
-                image_path, mount_dir, "-f".into(),
-                "-o".into(), "ro,nodev".into(),
-                "-o".into(), format!("uid={uid},gid={gid}"),
-                "-o".into(), format!("offset={}", image.offset)
-            ];
-            if get_env_var!("ENABLE_FUSE_DEBUG") == "1" {
-                exec_args.append(&mut vec!["-o".into(), "debug".into()]);
-            }
-            embed.squashfuse(exec_args)
+        if get_env_var!("ENABLE_FUSE_DEBUG") == "1" {
+            exec_args.append(&mut vec!["-o".into(), "debuglevel=debug".into()]);
+        } else {
+            exec_args.append(&mut vec!["-o".into(), "debuglevel=error".into()]);
         }
+        if get_env_var!("DWARFS_PRELOAD_ALL") == "1" {
+            exec_args.append(&mut vec!["-o".into(), "preload_all".into()]);
+        } else {
+            exec_args.append(&mut vec!["-o".into(), "preload_category=hotness".into()]);
+        }
+        let dwarfs_analysis_file = get_env_var!("DWARFS_ANALYSIS_FILE");
+        if !dwarfs_analysis_file.is_empty() {
+            exec_args.append(&mut vec!["-o".into(), format!("analysis_file={dwarfs_analysis_file}")]);
+        }
+        if get_env_var!("DWARFS_USE_MMAP") == "1" {
+            exec_args.append(&mut vec!["-o".into(), "block_allocator=mmap".into()]);
+        } else {
+            exec_args.append(&mut vec!["-o".into(), "block_allocator=malloc".into()]);
+        }
+        embed.dwarfs(exec_args)
     }
 }
 
@@ -1004,37 +941,22 @@ fn extract_image(embed: &Embed, image: &Image, mut extract_dir: PathBuf, is_extr
         }
     }
     let image_path = image.path.to_str().unwrap_or_default().to_string();
-    if image.is_dwar {
-        #[cfg(feature = "dwarfs")]
-        {
-            let cachesize = get_dwfs_cachesize();
-            let mut exec_args = vec![
-                "--input".into(), image_path,
-                "--log-level=error".into(),
-                format!("--cache-size={cachesize}"),
-                format!("--image-offset={}", image.offset),
-                format!("--num-workers={}", get_dwfs_workers(&cachesize, num_cpus::get())),
-                "--output".into(), extract_dir,
-                "--stdout-progress".into()
-            ];
-            if let Some(pattern) = pattern {
-                exec_args.append(&mut vec!["--pattern".into(), pattern.to_string()]);
-            }
-            embed.dwarfsextract(exec_args)
+    #[cfg(feature = "dwarfs")]
+    {
+        let cachesize = get_dwfs_cachesize();
+        let mut exec_args = vec![
+            "--input".into(), image_path,
+            "--log-level=error".into(),
+            format!("--cache-size={cachesize}"),
+            format!("--image-offset={}", image.offset),
+            format!("--num-workers={}", get_dwfs_workers(&cachesize, num_cpus::get())),
+            "--output".into(), extract_dir,
+            "--stdout-progress".into()
+        ];
+        if let Some(pattern) = pattern {
+            exec_args.append(&mut vec!["--pattern".into(), pattern.to_string()]);
         }
-    } else {
-        #[cfg(feature = "squashfs")]
-        {
-            let mut exec_args = vec!["-f".into(),
-                "-d".into(), extract_dir,
-                "-o".into(), image.offset.to_string(),
-                image_path
-            ];
-            if let Some(pattern) = pattern {
-                exec_args.push(pattern.into())
-            }
-            embed.unsquashfs(exec_args)
-        }
+        embed.dwarfsextract(exec_args)
     }
 }
 
@@ -1186,16 +1108,6 @@ fn print_usage(portable_home: &PathBuf, portable_share: &PathBuf, portable_confi
     env!("CARGO_PKG_DESCRIPTION"), env!("CARGO_PKG_REPOSITORY"));
 
     println!("\n    Embedded tools options:");
-    #[cfg(feature = "squashfs")]
-    println!("      --{ARG_PFX}-squashfuse    [ARGS]       Launch squashfuse");
-    #[cfg(feature = "squashfs")]
-    println!("      --{ARG_PFX}-unsquashfs    [ARGS]       Launch unsquashfs");
-    #[cfg(feature = "squashfs")]
-    println!("      --{ARG_PFX}-sqfscat       [ARGS]       Launch sqfscat");
-    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-    println!("      --{ARG_PFX}-mksquashfs    [ARGS]       Launch mksquashfs");
-    #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-    println!("      --{ARG_PFX}-sqfstar       [ARGS]       Launch sqfstar");
     #[cfg(feature = "dwarfs")]
     println!("      --{ARG_PFX}-dwarfs        [ARGS]       Launch dwarfs");
     #[cfg(all(not(feature = "lite"), feature = "dwarfs"))]
@@ -1279,16 +1191,6 @@ fn main() {
     let arg0_name = &basename(arg0);
 
     match arg0_name.as_str() {
-        #[cfg(feature = "squashfs")]
-        "squashfuse"       => { embed.squashfuse(exec_args); return }
-        #[cfg(feature = "squashfs")]
-        "unsquashfs"       => { embed.unsquashfs(exec_args); return }
-        #[cfg(feature = "squashfs")]
-        "sqfscat"       => { embed.sqfscat(exec_args); return }
-        #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-        "mksquashfs"       => { embed.mksquashfs(exec_args); return }
-        #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-        "sqfstar"       => { embed.sqfstar(exec_args); return }
         #[cfg(feature = "dwarfs")]
         "dwarfs"           => { embed.dwarfs(exec_args); return }
         #[cfg(all(not(feature = "lite"), feature = "dwarfs"))]
@@ -1335,31 +1237,6 @@ fn main() {
         match arg1 {
             arg if arg == format!("--{ARG_PFX}-version") => {
                 println!("v{URUNTIME_VERSION}");
-                return
-            }
-            #[cfg(feature = "squashfs")]
-            arg if arg == format!("--{ARG_PFX}-squashfuse") => {
-                embed.squashfuse(exec_args[1..].to_vec());
-                return
-            }
-            #[cfg(feature = "squashfs")]
-            arg if arg == format!("--{ARG_PFX}-unsquashfs") => {
-                embed.unsquashfs(exec_args[1..].to_vec());
-                return
-            }
-            #[cfg(feature = "squashfs")]
-            arg if arg == format!("--{ARG_PFX}-sqfscat") => {
-                embed.sqfscat(exec_args[1..].to_vec());
-                return
-            }
-            #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-            arg if arg == format!("--{ARG_PFX}-mksquashfs") => {
-                embed.mksquashfs(exec_args[1..].to_vec());
-                return
-            }
-            #[cfg(all(not(feature = "lite"), feature = "squashfs"))]
-            arg if arg == format!("--{ARG_PFX}-sqfstar") => {
-                embed.sqfstar(exec_args[1..].to_vec());
                 return
             }
             #[cfg(feature = "dwarfs")]

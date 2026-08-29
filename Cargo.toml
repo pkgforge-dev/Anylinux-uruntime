@@ -6,7 +6,7 @@ version = "0.6.1"
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/VHSgunzo/uruntime"
-description = "Universal RunImage and AppImage runtime with SquashFS and DwarFS supports"
+description = "Universal RunImage and AppImage runtime with DwarFS support"
 edition = "2021"
 
 [profile.release]
@@ -23,12 +23,10 @@ opt-level = 0
 [features]
 default = [
     "dwarfs",
-    "squashfs",
 ]
 upx = []
 lite = []
 dwarfs = []
-squashfs = []
 appimage = []
 
 [build-dependencies]
