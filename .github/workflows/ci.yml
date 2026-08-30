@@ -116,13 +116,15 @@ jobs:
           path: dist/uruntime-*
 
   release:
-    name: Release
+    name: Draft release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
       - name: Download artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -130,9 +132,25 @@ jobs:
           merge-multiple: true
           path: dist
 
-      - name: Release
+      - name: Get version
+        run: |
+          chmod +x dist/uruntime-*
+          echo "VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "${GITHUB_ENV}"
+
+      - name: Check tag doesn't exist
+        run: |
+          if git ls-remote --tags origin "refs/tags/$VERSION" | grep -q "$VERSION"; then
+            echo "Error: tag $VERSION already exists. Bump the version in Cargo.toml first."
+            exit 1
+          fi
+
+      - name: Draft Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
+          name: "${{ env.VERSION }}"
+          tag_name: "${{ env.VERSION }}"
+          prerelease: false
+          draft: true
+          generate_release_notes: true
+          make_latest: true
           files: dist/uruntime*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
