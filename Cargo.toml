@@ -46,3 +46,7 @@ xxhash-rust = { version = "0.8.18", features = [ "xxh3" ] }
 nix = { version = "0.31.3", features = [ "fs", "signal", "mount" ] }
 dotenv = { git = "https://github.com/VHSgunzo/dotenv.git" }
 memfd-exec = { git = "https://github.com/VHSgunzo/memfd-exec.git" }
+
+# zstd-sys unconditionally builds x86_64 asm, disable it for other targets
+[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+zstd = { version = "0.13.3", default-features = false, features = [ "no_asm" ] }
