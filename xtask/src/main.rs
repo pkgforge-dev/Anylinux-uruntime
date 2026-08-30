@@ -8,10 +8,20 @@ use std::{
 
 
 const BIN_NAME: &str = "uruntime";
-const TARGET_X86_64: &str = "x86_64-unknown-linux-musl";
-const TARGET_AARCH64: &str = "aarch64-unknown-linux-musl";
 
 type DynError = Box<dyn std::error::Error>;
+
+fn target_for(arch: &str) -> &'static str {
+    match arch {
+        "x86_64" => "x86_64-unknown-linux-musl",
+        "aarch64" => "aarch64-unknown-linux-musl",
+        "riscv64" => "riscv64gc-unknown-linux-musl",
+        "loongarch64" => "loongarch64-unknown-linux-musl",
+        "powerpc64" => "powerpc64-unknown-linux-musl",
+        "ppc64le" => "powerpc64le-unknown-linux-musl",
+        _ => panic!("unknown arch: {}", arch),
+    }
+}
 
 fn main() {
     if let Err(e) = try_main() {
@@ -21,25 +31,20 @@ fn main() {
 }
 
 fn try_main() -> Result<(), DynError> {
-    let all_bins = vec![
-        "runimage-x86_64",
-        "appimage-x86_64",
-        "appimage-lite-x86_64",
-        "appimage-dwarfs-x86_64",
-        "appimage-dwarfs-lite-x86_64",
-
-        "runimage-aarch64",
-        "appimage-aarch64",
-        "appimage-lite-aarch64",
-        "appimage-dwarfs-aarch64",
-        "appimage-dwarfs-lite-aarch64",
-    ];
+    let mut all_bins: Vec<String> = Vec::new();
+    for arch in ["x86_64", "aarch64", "riscv64", "loongarch64", "powerpc64", "ppc64le"] {
+        all_bins.append(&mut vec![
+            format!("runimage-{arch}"),
+            format!("appimage-{arch}"),
+            format!("appimage-lite-{arch}"),
+        ]);
+    }
     let arg = env::args().nth(1).unwrap_or_else(||{
         "".into()
     });
     let arg = arg.as_str();
 
-    if all_bins.contains(&arg) {
+    if all_bins.iter().any(|bin| bin == arg) {
         build(arg)?;
         return Ok(())
     }
@@ -47,20 +52,18 @@ fn try_main() -> Result<(), DynError> {
     match arg {
         "all" => {
             for bin in all_bins {
-                build(bin)?
+                build(&bin)?
             }
         },
-        "x86_64" => {
-            for bin in all_bins.iter().filter(|&bin| bin.ends_with("x86_64")) {
-                build(bin)?
+        _ => {
+            if all_bins.iter().any(|bin| bin.ends_with(arg)) {
+                for bin in all_bins.iter().filter(|bin| bin.ends_with(arg)) {
+                    build(&bin)?
+                }
+            } else {
+                print_help()
             }
         },
-        "aarch64" => {
-            for bin in all_bins.iter().filter(|&bin| bin.ends_with("aarch64")) {
-                build(bin)?
-            }
-        },
-        _ => print_help(),
     }
     Ok(())
 }
@@ -74,19 +77,33 @@ fn print_help() {
     eprintln!("Tasks:
     x86_64                           build x86_64 RunImage and AppImage uruntime
     runimage-x86_64                  build x86_64 RunImage uruntime
-    runimage-dwarfs-x86_64           build x86_64 RunImage uruntime (DwarFS-only)
     appimage-x86_64                  build x86_64 AppImage uruntime
     appimage-lite-x86_64             build x86_64 AppImage uruntime (no dwarfsck, mkdwarfs)
-    appimage-dwarfs-x86_64           build x86_64 AppImage uruntime (DwarFS-only)
-    appimage-dwarfs-lite-x86_64      build x86_64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
 
     aarch64                          build aarch64 RunImage and AppImage uruntime
     runimage-aarch64                 build aarch64 RunImage uruntime
-    runimage-dwarfs-aarch64          build aarch64 RunImage uruntime (DwarFS-only)
     appimage-aarch64                 build aarch64 AppImage uruntime
     appimage-lite-aarch64            build aarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
-    appimage-dwarfs-aarch64          build aarch64 AppImage uruntime (DwarFS-only)
-    appimage-dwarfs-lite-aarch64     build aarch64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
+
+    riscv64                          build riscv64 RunImage and AppImage uruntime
+    runimage-riscv64                 build riscv64 RunImage uruntime
+    appimage-riscv64                 build riscv64 AppImage uruntime
+    appimage-lite-riscv64            build riscv64 AppImage uruntime (no dwarfsck, mkdwarfs)
+
+    loongarch64                      build loongarch64 RunImage and AppImage uruntime
+    runimage-loongarch64             build loongarch64 RunImage uruntime
+    appimage-loongarch64             build loongarch64 AppImage uruntime
+    appimage-lite-loongarch64        build loongarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
+
+    powerpc64                        build powerpc64 RunImage and AppImage uruntime
+    runimage-powerpc64               build powerpc64 RunImage uruntime
+    appimage-powerpc64               build powerpc64 AppImage uruntime
+    appimage-lite-powerpc64          build powerpc64 AppImage uruntime (no dwarfsck, mkdwarfs)
+
+    ppc64le                          build ppc64le RunImage and AppImage uruntime
+    runimage-ppc64le                 build ppc64le RunImage uruntime
+    appimage-ppc64le                 build ppc64le AppImage uruntime
+    appimage-lite-ppc64le            build ppc64le AppImage uruntime (no dwarfsck, mkdwarfs)
 
     all                              build all of the above")
 }
@@ -164,19 +181,12 @@ fn add_magic(path: &PathBuf, magic: &str) -> Result<(), DynError> {
 fn build(bin: &str) -> Result<(), DynError> {
     create_dist_dir()?;
 
-    let cargo: &str;
-    let target: &str;
-    let mut is_strip = true;
-    let mut build_args = Vec::new();
+    let arch = bin.rsplit('-').next().unwrap_or_default();
+    let target = target_for(arch);
+    // the host `strip` cannot recognise foreign architectures
+    let is_strip = arch == "x86_64";
 
-    if bin.ends_with("aarch64") {
-        cargo = "cross";
-        is_strip = false;
-        target = TARGET_AARCH64;
-    } else {
-        cargo = "cargo";
-        target = TARGET_X86_64;
-    }
+    let mut build_args = Vec::new();
     build_args.append(&mut vec![
         "build", "--release",
         "--target", target
@@ -197,7 +207,7 @@ fn build(bin: &str) -> Result<(), DynError> {
     let upx = env::args().nth(2).unwrap_or_default().to_lowercase() == "--upx";
     if upx { build_args.append(&mut vec!["--features", "upx"]) }
 
-    let status = Command::new(cargo)
+    let status = Command::new("cargo")
         .current_dir(project_root())
         .args(build_args)
         .status()?;

@@ -24,14 +24,31 @@ fn main() {
     let assets_path = project_path.join(format!("assets-{arch}"));
     let assets_path_link = project_path.join("assets");
 
+    // upstream dwarfs release assets use different arch names and ship
+    // upx-compressed binaries only for some architectures
+    let dwarf_arch = match arch.as_str() {
+        "powerpc64" => "ppc64",
+        "powerpc64le" => "ppc64le",
+        _ => arch.as_str(),
+    };
+    let upx = matches!(dwarf_arch, "x86_64" | "aarch64");
+
     let assets = IndexMap::from([
         #[cfg(feature = "dwarfs")]
         {
             cfg_if! {
                 if #[cfg(feature = "lite")] {
-                    ("dwarfs-fuse-extract-upx", format!("https://github.com/mhx/dwarfs/releases/download/v{0}/dwarfs-fuse-extract-{0}-Linux-{arch}.upx", DWARFS_VERSION))
+                    if upx {
+                        ("dwarfs-fuse-extract-upx", format!("https://github.com/mhx/dwarfs/releases/download/v{DWARFS_VERSION}/dwarfs-fuse-extract-{DWARFS_VERSION}-Linux-{dwarf_arch}.upx"))
+                    } else {
+                        ("dwarfs-fuse-extract", format!("https://github.com/mhx/dwarfs/releases/download/v{DWARFS_VERSION}/dwarfs-fuse-extract-{DWARFS_VERSION}-Linux-{dwarf_arch}"))
+                    }
                 } else {
-                    ("dwarfs-universal-upx", format!("https://github.com/mhx/dwarfs/releases/download/v{0}/dwarfs-universal-{0}-Linux-{arch}.upx", DWARFS_VERSION))
+                    if upx {
+                        ("dwarfs-universal-upx", format!("https://github.com/mhx/dwarfs/releases/download/v{DWARFS_VERSION}/dwarfs-universal-{DWARFS_VERSION}-Linux-{dwarf_arch}.upx"))
+                    } else {
+                        ("dwarfs-universal", format!("https://github.com/mhx/dwarfs/releases/download/v{DWARFS_VERSION}/dwarfs-universal-{DWARFS_VERSION}-Linux-{dwarf_arch}"))
+                    }
                 }
             }
         },

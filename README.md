@@ -1,5 +1,5 @@
 # URUNTIME
-Universal [RunImage](https://github.com/VHSgunzo/runimage) and [AppImage](https://appimage.org/) runtime with [SquashFS](https://docs.kernel.org/filesystems/squashfs.html) and [DwarFS](https://github.com/mhx/dwarfs) supports
+Universal [RunImage](https://github.com/VHSgunzo/runimage) and [AppImage](https://appimage.org/) runtime with [DwarFS](https://github.com/mhx/dwarfs) support
 
 ## To get started:
 * **Download the latest revision**
@@ -10,7 +10,6 @@ git clone https://github.com/VHSgunzo/uruntime.git && cd uruntime
 * **Compile a binary**
 ```
 rustup toolchain add nightly
-rustup target add x86_64-unknown-linux-musl
 rustup component add rust-src --toolchain nightly
 
 cargo xtask
@@ -18,20 +17,32 @@ cargo xtask
 #     x86_64                           build x86_64 RunImage and AppImage uruntime
 #     runimage-x86_64                  build x86_64 RunImage uruntime
 #     appimage-x86_64                  build x86_64 AppImage uruntime
-#     appimage-lite-x86_64             build x86_64 AppImage uruntime (no dwarfsck, mkdwarfs, mksquashfs, sqfstar)
-#     appimage-squashfs-x86_64         build x86_64 AppImage uruntime (SquashFS-only)
-#     appimage-squashfs-lite-x86_64    build x86_64 AppImage uruntime (SquashFS-only no mksquashfs, sqfstar)
-#     appimage-dwarfs-x86_64           build x86_64 AppImage uruntime (DwarFS-only)
-#     appimage-dwarfs-lite-x86_64      build x86_64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
+#     appimage-lite-x86_64             build x86_64 AppImage uruntime (no dwarfsck, mkdwarfs)
 # 
 #     aarch64                          build aarch64 RunImage and AppImage uruntime
 #     runimage-aarch64                 build aarch64 RunImage uruntime
 #     appimage-aarch64                 build aarch64 AppImage uruntime
-#     appimage-lite-aarch64            build aarch64 AppImage uruntime (no dwarfsck, mkdwarfs, mksquashfs, sqfstar)
-#     appimage-squashfs-aarch64        build aarch64 AppImage uruntime (SquashFS-only)
-#     appimage-squashfs-lite-aarch64   build aarch64 AppImage uruntime (SquashFS-only no mksquashfs, sqfstar)
-#     appimage-dwarfs-aarch64          build aarch64 AppImage uruntime (DwarFS-only)
-#     appimage-dwarfs-lite-aarch64     build aarch64 AppImage uruntime (DwarFS-only no dwarfsck, mkdwarfs)
+#     appimage-lite-aarch64            build aarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
+# 
+#     riscv64                          build riscv64 RunImage and AppImage uruntime
+#     runimage-riscv64                 build riscv64 RunImage uruntime
+#     appimage-riscv64                 build riscv64 AppImage uruntime
+#     appimage-lite-riscv64            build riscv64 AppImage uruntime (no dwarfsck, mkdwarfs)
+# 
+#     loongarch64                      build loongarch64 RunImage and AppImage uruntime
+#     runimage-loongarch64             build loongarch64 RunImage uruntime
+#     appimage-loongarch64             build loongarch64 AppImage uruntime
+#     appimage-lite-loongarch64        build loongarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
+# 
+#     powerpc64                        build powerpc64 RunImage and AppImage uruntime
+#     runimage-powerpc64               build powerpc64 RunImage uruntime
+#     appimage-powerpc64               build powerpc64 AppImage uruntime
+#     appimage-lite-powerpc64          build powerpc64 AppImage uruntime (no dwarfsck, mkdwarfs)
+# 
+#     ppc64le                          build ppc64le RunImage and AppImage uruntime
+#     runimage-ppc64le                 build ppc64le RunImage uruntime
+#     appimage-ppc64le                 build ppc64le AppImage uruntime
+#     appimage-lite-ppc64le            build ppc64le AppImage uruntime (no dwarfsck, mkdwarfs)
 # 
 #     all                              build all of the above
 
@@ -124,11 +135,6 @@ RunImage runtime usage
                                              mount point and wait for kill with Ctrl-C
 
     Embedded tools options:
-      --runtime-squashfuse    [ARGS]       Launch squashfuse
-      --runtime-unsquashfs    [ARGS]       Launch unsquashfs
-      --runtime-sqfscat       [ARGS]       Launch sqfscat
-      --runtime-mksquashfs    [ARGS]       Launch mksquashfs
-      --runtime-sqfstar       [ARGS]       Launch sqfstar
       --runtime-dwarfs        [ARGS]       Launch dwarfs
       --runtime-dwarfsck      [ARGS]       Launch dwarfsck
       --runtime-mkdwarfs      [ARGS]       Launch mkdwarfs
@@ -225,11 +231,6 @@ AppImage runtime usage
                                              mount point and wait for kill with Ctrl-C
 
     Embedded tools options:
-      --appimage-squashfuse    [ARGS]       Launch squashfuse
-      --appimage-unsquashfs    [ARGS]       Launch unsquashfs
-      --appimage-sqfscat       [ARGS]       Launch sqfscat
-      --appimage-mksquashfs    [ARGS]       Launch mksquashfs
-      --appimage-sqfstar       [ARGS]       Launch sqfstar
       --appimage-dwarfs        [ARGS]       Launch dwarfs
       --appimage-dwarfsck      [ARGS]       Launch dwarfsck
       --appimage-mkdwarfs      [ARGS]       Launch mkdwarfs
