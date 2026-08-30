@@ -17,7 +17,7 @@ fn target_for(arch: &str) -> &'static str {
         "aarch64" => "aarch64-unknown-linux-musl",
         "riscv64" => "riscv64gc-unknown-linux-musl",
         "loongarch64" => "loongarch64-unknown-linux-musl",
-        "powerpc64" => "powerpc64-unknown-linux-musl",
+        "ppc64" => "powerpc64-unknown-linux-musl",
         "ppc64le" => "powerpc64le-unknown-linux-musl",
         _ => panic!("unknown arch: {}", arch),
     }
@@ -32,7 +32,7 @@ fn main() {
 
 fn try_main() -> Result<(), DynError> {
     let mut all_bins: Vec<String> = Vec::new();
-    for arch in ["x86_64", "aarch64", "riscv64", "loongarch64", "powerpc64", "ppc64le"] {
+    for arch in ["x86_64", "aarch64", "riscv64", "loongarch64", "ppc64", "ppc64le"] {
         all_bins.append(&mut vec![
             format!("runimage-{arch}"),
             format!("appimage-{arch}"),
@@ -95,10 +95,10 @@ fn print_help() {
     appimage-loongarch64             build loongarch64 AppImage uruntime
     appimage-lite-loongarch64        build loongarch64 AppImage uruntime (no dwarfsck, mkdwarfs)
 
-    powerpc64                        build powerpc64 RunImage and AppImage uruntime
-    runimage-powerpc64               build powerpc64 RunImage uruntime
-    appimage-powerpc64               build powerpc64 AppImage uruntime
-    appimage-lite-powerpc64          build powerpc64 AppImage uruntime (no dwarfsck, mkdwarfs)
+    ppc64                             build ppc64 RunImage and AppImage uruntime
+    runimage-ppc64                    build ppc64 RunImage uruntime
+    appimage-ppc64                    build ppc64 AppImage uruntime
+    appimage-lite-ppc64               build ppc64 AppImage uruntime (no dwarfsck, mkdwarfs)
 
     ppc64le                          build ppc64le RunImage and AppImage uruntime
     runimage-ppc64le                 build ppc64le RunImage uruntime
