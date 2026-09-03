@@ -168,6 +168,9 @@ RunImage runtime usage
       application contained inside this RunImage to store its data in this
       directory rather than in your home directory
 
+      While any of these directories is in use, APPIMAGE_PORTABLE_MODE=1 is set
+      in the environment of the contained application
+
     Environment variables:
 
       URUNTIME                       Path to uruntime
@@ -260,6 +263,9 @@ AppImage runtime usage
       As long as the directory exists and is neither moved nor renamed, the
       application contained inside this AppImage to store its data in this
       directory rather than in your home directory
+
+      While any of these directories is in use, APPIMAGE_PORTABLE_MODE=1 is set
+      in the environment of the contained application
 
     Environment variables:
 

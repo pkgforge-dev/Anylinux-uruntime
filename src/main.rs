@@ -960,7 +960,7 @@ fn extract_image(embed: &Embed, image: &Image, mut extract_dir: PathBuf, is_extr
     }
 }
 
-fn try_set_portable_dir(dir: &PathBuf, env_var: &str, default_path: Option<&str>) {
+fn try_set_portable_dir(dir: &PathBuf, env_var: &str, default_path: Option<&str>) -> bool {
     let real_env_var = format!("REAL_{}", env_var);
     if dir.is_dir() {
         if get_env_var!("{}", real_env_var).is_empty() {
@@ -975,7 +975,9 @@ fn try_set_portable_dir(dir: &PathBuf, env_var: &str, default_path: Option<&str>
         }
         eprintln!("Setting ${} to {:?}", env_var, dir);
         env::set_var(env_var, dir);
+        return true
     }
+    false
 }
 
 fn parse_reuse_check_delay(delay: &str) -> Option<Duration> {
@@ -1143,7 +1145,10 @@ fn print_usage(portable_home: &PathBuf, portable_share: &PathBuf, portable_confi
       --{ARG_PFX}-portable-cache option, which will create this directory for you.
       As long as the directory exists and is neither moved nor renamed, the
       application contained inside this {SELF_NAME} to store its data in this
-      directory rather than in your home directory", portable_home, portable_share, portable_config, portable_cache);
+      directory rather than in your home directory
+
+      While any of these directories is in use, APPIMAGE_PORTABLE_MODE=1 is set
+      in the environment of the contained application", portable_home, portable_share, portable_config, portable_cache);
 
     println!("\n    Environment variables:
 
@@ -1662,10 +1667,15 @@ fn main() {
         }
         env::set_var("OWD", getcwd().unwrap_or_default());
 
-        try_set_portable_dir(portable_share, "XDG_DATA_HOME", Some(".local/share"));
-        try_set_portable_dir(portable_config, "XDG_CONFIG_HOME", Some(".config"));
-        try_set_portable_dir(portable_cache, "XDG_CACHE_HOME", Some(".cache"));
-        try_set_portable_dir(portable_home, "HOME", None);
+        let mut is_portable_mode = false;
+        is_portable_mode |= try_set_portable_dir(portable_share, "XDG_DATA_HOME", Some(".local/share"));
+        is_portable_mode |= try_set_portable_dir(portable_config, "XDG_CONFIG_HOME", Some(".config"));
+        is_portable_mode |= try_set_portable_dir(portable_cache, "XDG_CACHE_HOME", Some(".cache"));
+        is_portable_mode |= try_set_portable_dir(portable_home, "HOME", None);
+        if is_portable_mode {
+            // single flag for the payload to detect any portable dir in use
+            env::set_var("APPIMAGE_PORTABLE_MODE", "1");
+        }
 
         match Command::new(run.canonicalize().unwrap_or(run.clone())).args(&exec_args).spawn() {
             Ok(mut run_child) => {
