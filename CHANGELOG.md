@@ -6,8 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Support for a leading metadata SquashFS image. When the image at the ELF boundary is SquashFS and another filesystem image follows it, the runtime uses the second image as the application payload. This lets SquashFS-only thumbnailers and desktop integration tools read `.DirIcon` and the desktop entry while the DwarFS payload remains the mounted application filesystem.
+- Anylinux-uruntime fork identification in the `--help` and `--version` output.
+
 ### Changed
 
+- Repository metadata now points at the Anylinux-uruntime fork, with the upstream uruntime repository listed in the help output.
 - Restored per-architecture QEMU smoke execution for all finished foreign runtime artifacts in CI. The full AArch64 Rust quality gate remains commented while its QEMU test-suite cost is investigated.
 
 ## [0.8.1] - 2026-09-24

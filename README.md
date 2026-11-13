@@ -1,5 +1,10 @@
 # uruntime
 
+> **This is the Anylinux-uruntime fork of [uruntime](https://github.com/VHSgunzo/uruntime).**
+> It tracks upstream version `0.8.1` and adds support for a leading metadata
+> SquashFS image, so SquashFS-only thumbnailers and desktop integration tools can
+> read metadata from DwarFS AppImages.
+
 `uruntime` is a static runtime for [RunImage](https://github.com/VHSgunzo/runimage) and [AppImage](https://appimage.org/). It launches appended SquashFS and DwarFS images through FUSE, with extraction as a configurable fallback when FUSE is unavailable.
 
 A single ELF contains the launcher and static filesystem tools. Runtime settings, environment variables, signatures, and update information can be changed after an image has been built, without recompiling the runtime or repacking its filesystem.
@@ -84,8 +89,8 @@ AppImage options use the `--appimage-*` prefix and RunImage options use `--runti
 The project uses the pinned Rust nightly from `rust-toolchain.toml`. Repository build, test, and release orchestration is implemented in Rust through `xtask`.
 
 ```sh
-git clone https://github.com/VHSgunzo/uruntime.git
-cd uruntime
+git clone https://github.com/pkgforge-dev/Anylinux-uruntime.git
+cd Anylinux-uruntime
 rustup component add rust-src rustfmt clippy
 
 # Run the canonical local gate

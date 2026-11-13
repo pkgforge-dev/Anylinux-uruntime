@@ -4,8 +4,8 @@ cargo-features = ["panic-immediate-abort"]
 name = "uruntime"
 version = "0.8.1"
 license = "MIT"
-repository = "https://github.com/VHSgunzo/uruntime"
-description = "Universal RunImage and AppImage runtime with SquashFS and DwarFS supports"
+repository = "https://github.com/pkgforge-dev/Anylinux-uruntime"
+description = "Anylinux-uruntime fork of uruntime: universal RunImage and AppImage runtime with SquashFS and DwarFS support"
 edition = "2021"
 
 [profile.release]
