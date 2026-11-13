@@ -463,6 +463,11 @@ fn filesystem_kind(bytes: &[u8; 4]) -> Option<(bool, bool)> {
 /// desktop integration tools). The runtime itself must launch the second,
 /// complete image, otherwise it would try to run `AppRun` from the metadata
 /// image.
+///
+/// This deliberately does not parse SquashFS contents and does not depend on
+/// the `squashfs` feature. Only the superblock's size field is used to skip the
+/// leading image, so DwarFS-only (`lite`) runtimes do not grow by a SquashFS
+/// reader or any SquashFS helper binary.
 fn payload_offset_after_metadata(executable: &SelfExecutable, offset: u64) -> Result<Option<u64>> {
     let mut bytes_used_raw = [0u8; 8];
     if executable
@@ -4304,6 +4309,7 @@ fn print_usage(
 ) {
     println!("{} v{URUNTIME_VERSION}
    Repository: {}
+   Upstream:   https://github.com/VHSgunzo/uruntime
 
    Runtime options:
     Every --{ARG_PFX}-* option below also accepts the universal --uruntime-* prefix.
@@ -4525,6 +4531,7 @@ fn main() {
         match arg1 {
             arg if is_runtime_option(arg, "version") => {
                 println!("v{URUNTIME_VERSION}");
+                println!("Anylinux-uruntime fork of uruntime");
                 return;
             }
             #[cfg(feature = "squashfs")]

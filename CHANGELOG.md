@@ -8,8 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [0.8.2] - 2026-11-13
 
+### Added
+
+- Support for a leading metadata SquashFS image. When the image at the ELF boundary is SquashFS and a DwarFS image follows it, the runtime uses the second image as the application payload. This lets SquashFS-only thumbnailers and desktop integration tools read `.DirIcon` and the desktop entry while the DwarFS payload remains the mounted application filesystem.
+- Anylinux-uruntime fork identification in the `--help` and `--version` output.
+
 ### Changed
 
+- Repository metadata now points at the Anylinux-uruntime fork, with the upstream uruntime repository listed in the help output.
 - Updated bundled DwarFS to 0.15.8 and squashfuse to 0.6.5, with refreshed source/payload checksums for all six architectures.
 - Refreshed runtime and xtask Rust dependencies.
 - Restored QEMU smoke tests for every foreign release artifact. The expensive full AArch64 Rust quality gate remains disabled.
@@ -155,7 +161,7 @@ This is a major runtime-safety and compatibility update. It changes how uruntime
 - Generated SquashFS and DwarFS fixtures exclusively with the project-pinned embedded helpers and verified byte-for-byte reproducibility and real bounded application launches.
 - Validated all nine x86_64 and all nine AArch64 release variants, including QEMU execution for AArch64 artifacts.
 
-[Unreleased]: https://github.com/VHSgunzo/uruntime/compare/v0.8.2...HEAD
-[0.8.2]: https://github.com/VHSgunzo/uruntime/compare/v0.8.1...v0.8.2
-[0.8.1]: https://github.com/VHSgunzo/uruntime/compare/v0.8.0...v0.8.1
-[0.8.0]: https://github.com/VHSgunzo/uruntime/compare/v0.7.1...v0.8.0
+[Unreleased]: https://github.com/pkgforge-dev/Anylinux-uruntime/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/pkgforge-dev/Anylinux-uruntime/compare/v0.8.1...v0.8.2
+[0.8.1]: https://github.com/pkgforge-dev/Anylinux-uruntime/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/pkgforge-dev/Anylinux-uruntime/compare/v0.7.1...v0.8.0
