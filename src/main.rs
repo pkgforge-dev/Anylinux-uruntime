@@ -438,10 +438,10 @@ fn mfd_exec(exec_name: &str, exec_bytes: &[u8], exec_args: Vec<String>) {
 /// SquashFS superblock field offset holding the number of bytes the image
 /// actually occupies (the tail of the file may be zero padding).
 const SQUASHFS_BYTES_USED_OFFSET: u64 = 40;
-/// How far past the metadata image to look for the real payload. mksquashfs
-/// pads its output to a 4 KiB boundary, but allow some slack for other packers
-/// and future alignment choices.
-const METADATA_PAYLOAD_SCAN_LIMIT: u64 = 64 * 1024;
+/// How far past the metadata image to look for the real payload. The image
+/// builder uses a fixed 128 KiB metadata slot, so scanning that much past the
+/// SquashFS image is sufficient without adding a SquashFS reader.
+const METADATA_PAYLOAD_SCAN_LIMIT: u64 = 128 * 1024;
 
 /// Return `(is_dwar, is_squash)` for a filesystem magic, or `None` if the
 /// bytes are not the start of an image.
