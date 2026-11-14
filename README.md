@@ -1,9 +1,10 @@
 # uruntime
 
-> **This is the Anylinux-uruntime fork of [uruntime](https://github.com/VHSgunzo/uruntime).**
-> It tracks upstream version `0.8.2` and adds support for a leading metadata
-> SquashFS image, so SquashFS-only thumbnailers and desktop integration tools can
-> read metadata from DwarFS AppImages.
+> **This repository is archived and no longer maintained.**
+> Its metadata SquashFS sidecar support was merged into
+> [VHSgunzo/uruntime](https://github.com/VHSgunzo/uruntime) v0.8.3 in
+> [uruntime PR #29](https://github.com/VHSgunzo/uruntime/pull/29).
+> Use [VHSgunzo/uruntime](https://github.com/VHSgunzo/uruntime) instead.
 
 `uruntime` is a static runtime for [RunImage](https://github.com/VHSgunzo/runimage) and [AppImage](https://appimage.org/). It launches appended SquashFS and DwarFS images through FUSE, with extraction as a configurable fallback when FUSE is unavailable.
 
